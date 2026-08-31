@@ -146,18 +146,30 @@ async function fetchVideoDurations(videoIds: string[]): Promise<Map<string, numb
   return durations;
 }
 
+export interface ChannelVideoSplit {
+  /** Videos over 60 seconds -- everything shown on the main Teachings library. */
+  longForm: PlaylistVideo[];
+  /** Videos 60 seconds or under -- YouTube Shorts, shown on the Shorts tab. */
+  shorts: PlaylistVideo[];
+}
+
 /**
- * Fetches every video the channel has uploaded, excluding whatever is in
- * `excludePlaylistId` (the School of the Prophets playlist, which is kept
- * as its own standalone section rather than mixed into the general video
- * library) and excluding YouTube Shorts. Powers the /teachings page.
+ * Fetches every video the channel has uploaded and splits it by duration
+ * into long-form teachings vs. Shorts. `excludePlaylistId` (the School of
+ * the Prophets playlist) is subtracted only from the long-form bucket, to
+ * avoid duplicating a full sermon across both /school-of-the-prophets and
+ * /teachings -- Shorts are shown unconditionally, even if the same clip
+ * also happens to sit in that playlist, since every Short posted should
+ * show up on the Shorts tab. A single shared fetch + duration lookup
+ * powers both tabs on /teachings so loading that page never costs double
+ * the YouTube API quota.
  */
-export async function fetchOtherChannelVideos(
+export async function fetchOtherChannelVideosSplit(
   channelId: string,
   excludePlaylistId: string,
   maxResults = 50
-): Promise<PlaylistVideo[]> {
-  if (!channelId) return [];
+): Promise<ChannelVideoSplit> {
+  if (!channelId) return { longForm: [], shorts: [] };
 
   const uploadsPlaylistId = getUploadsPlaylistId(channelId);
   const [allUploads, excluded] = await Promise.all([
@@ -166,12 +178,34 @@ export async function fetchOtherChannelVideos(
   ]);
 
   const excludedIds = new Set(excluded.map((video) => video.videoId));
-  const candidates = allUploads.filter((video) => !excludedIds.has(video.videoId));
+  const durations = await fetchVideoDurations(allUploads.map((video) => video.videoId));
+  const longForm: PlaylistVideo[] = [];
+  const shorts: PlaylistVideo[] = [];
 
-  const durations = await fetchVideoDurations(candidates.map((video) => video.videoId));
-  return candidates.filter((video) => {
+  for (const video of allUploads) {
     const duration = durations.get(video.videoId);
-    // Unknown duration (API/quota hiccup) -> keep the video rather than hide it.
-    return duration === undefined || duration > SHORTS_MAX_DURATION_SECONDS;
-  });
+    // Unknown duration (API/quota hiccup) -> treat as long-form rather than hide it.
+    const isShort = duration !== undefined && duration <= SHORTS_MAX_DURATION_SECONDS;
+
+    if (isShort) {
+      shorts.push(video);
+    } else if (!excludedIds.has(video.videoId)) {
+      longForm.push(video);
+    }
+  }
+
+  return { longForm, shorts };
+}
+
+/**
+ * Convenience wrapper for callers (e.g. the admin video-tagging list) that
+ * only need the long-form videos.
+ */
+export async function fetchOtherChannelVideos(
+  channelId: string,
+  excludePlaylistId: string,
+  maxResults = 50
+): Promise<PlaylistVideo[]> {
+  const { longForm } = await fetchOtherChannelVideosSplit(channelId, excludePlaylistId, maxResults);
+  return longForm;
 }
