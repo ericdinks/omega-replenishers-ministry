@@ -14,6 +14,7 @@ export const SITE_CONTENT_KEYS = [
   "contact_email",
   "contact_address",
   "teachings_video_limit",
+  "order_notification_email",
 ] as const;
 
 /** Hard ceiling: YouTube's playlistItems.list API caps maxResults at 50 per request. */
@@ -39,6 +40,11 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   contact_email: "prophetshedrackaogboji@gmail.com",
   contact_address: "Abuja, Nigeria",
   teachings_video_limit: "50",
+  // NOTE: this must stay the email that owns the Resend account/API key
+  // until a custom domain is verified with Resend -- their sandbox sender
+  // can only deliver to that one address. Change this the moment a
+  // different Resend account (or a verified domain) is in place.
+  order_notification_email: "ericdinks1@gmail.com",
 };
 
 /**

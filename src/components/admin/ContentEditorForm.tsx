@@ -17,6 +17,10 @@ const FIELDS: Array<{
   { key: "contact_phone", label: "Contact Phone (also used for WhatsApp)" },
   { key: "contact_email", label: "Contact Email" },
   { key: "contact_address", label: "Contact Address / Location" },
+  {
+    key: "order_notification_email",
+    label: "Store Order Notification Email (must match the Resend account's own email until a domain is verified)",
+  },
 ];
 
 export function ContentEditorForm({ content }: { content: SiteContent }) {

@@ -9,6 +9,9 @@ import type {
   DonationTierInsert,
   DonationTierRow,
   PrayerRequestStatus,
+  ProductInsert,
+  ProductOrderStatus,
+  ProductRow,
   TestimonialInsert,
   TestimonialStatus,
   VideoSourceType,
@@ -466,4 +469,122 @@ export async function deleteAdminUser(userId: string) {
   }
 
   revalidatePath("/admin");
+}
+
+/** Creates a new digital product (e-book, music, etc). The file is already uploaded. */
+export async function createProduct(input: ProductInsert) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("products").insert(input);
+
+  if (error) {
+    throw new Error("Failed to create the product.");
+  }
+
+  revalidatePath("/store");
+  revalidatePath("/admin");
+}
+
+export async function updateProduct(
+  id: string,
+  updates: Partial<
+    Pick<ProductRow, "title" | "description" | "category" | "price" | "cover_image_url">
+  >
+) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("products").update(updates).eq("id", id);
+
+  if (error) {
+    throw new Error("Failed to update the product.");
+  }
+
+  revalidatePath("/store");
+  revalidatePath("/admin");
+}
+
+export async function setProductActive(id: string, isActive: boolean) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("products").update({ is_active: isActive }).eq("id", id);
+
+  if (error) {
+    throw new Error("Failed to update the product.");
+  }
+
+  revalidatePath("/store");
+  revalidatePath("/admin");
+}
+
+export async function deleteProduct(id: string) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: product } = await admin
+    .from("products")
+    .select("file_path")
+    .eq("id", id)
+    .maybeSingle();
+
+  const { error } = await admin.from("products").delete().eq("id", id);
+
+  if (error) {
+    throw new Error("Failed to delete the product.");
+  }
+
+  if (product?.file_path) {
+    await admin.storage.from("digital-products").remove([product.file_path]);
+  }
+
+  revalidatePath("/store");
+  revalidatePath("/admin");
+}
+
+export async function setProductOrderStatus(id: string, status: ProductOrderStatus) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("product_orders").update({ status }).eq("id", id);
+
+  if (error) {
+    throw new Error("Failed to update the order.");
+  }
+
+  revalidatePath("/admin");
+}
+
+/**
+ * Generates a time-limited signed URL for a product's file so the
+ * operator can send it to a customer once payment is confirmed in
+ * PayPal. Expires in 7 days -- long enough to deliver, short enough
+ * that an old link floating in an inbox doesn't stay valid forever.
+ */
+export async function generateProductDownloadLink(productId: string): Promise<string> {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+  const { data: product, error: productError } = await admin
+    .from("products")
+    .select("file_path")
+    .eq("id", productId)
+    .maybeSingle();
+
+  if (productError || !product) {
+    throw new Error("Product not found.");
+  }
+
+  const SEVEN_DAYS_IN_SECONDS = 60 * 60 * 24 * 7;
+  const { data, error } = await admin.storage
+    .from("digital-products")
+    .createSignedUrl(product.file_path, SEVEN_DAYS_IN_SECONDS);
+
+  if (error || !data) {
+    throw new Error("Failed to generate a download link.");
+  }
+
+  return data.signedUrl;
 }

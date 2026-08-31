@@ -10,6 +10,8 @@ import { DonationTiersManager } from "@/components/admin/DonationTiersManager";
 import { VideoCategoriesManager } from "@/components/admin/VideoCategoriesManager";
 import { VideoLimitSetting } from "@/components/admin/VideoLimitSetting";
 import { AdminUsersManager, type AdminUserSummary } from "@/components/admin/AdminUsersManager";
+import { ProductsManager } from "@/components/admin/ProductsManager";
+import { ProductOrdersManager } from "@/components/admin/ProductOrdersManager";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { signOutAdmin } from "@/app/admin/actions";
 import { youtubeConfig } from "@/lib/config/site";
@@ -44,6 +46,8 @@ export default async function AdminDashboardPage() {
     {
       data: { user: currentUser },
     },
+    { data: products },
+    { data: productOrders },
   ] = await Promise.all([
     admin.from("prayer_requests").select("*").order("created_at", { ascending: false }),
     admin
@@ -60,6 +64,8 @@ export default async function AdminDashboardPage() {
     getVideoCategoryAssignments(),
     admin.auth.admin.listUsers(),
     serverClient.auth.getUser(),
+    admin.from("products").select("*").order("display_order", { ascending: true }),
+    admin.from("product_orders").select("*").order("created_at", { ascending: false }),
   ]);
 
   const allRequests = requests ?? [];
@@ -77,6 +83,11 @@ export default async function AdminDashboardPage() {
       lastSignInAt: user.last_sign_in_at ?? null,
     }))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const allProducts = products ?? [];
+  const allProductOrders = productOrders ?? [];
+  const productTitles: Record<string, string> = Object.fromEntries(
+    allProducts.map((product) => [product.id, product.title])
+  );
 
   return (
     <div className="min-h-screen bg-navy-50 py-10">
@@ -173,6 +184,30 @@ export default async function AdminDashboardPage() {
                       categories={videoCategories}
                       assignments={videoCategoryAssignments}
                     />
+                  </div>
+                ),
+              },
+              {
+                id: "store",
+                label: "Store",
+                content: (
+                  <div className="space-y-10">
+                    <div>
+                      <h2 className="font-display text-lg font-bold text-navy-900">Products</h2>
+                      <div className="mt-4">
+                        <ProductsManager products={allProducts} />
+                      </div>
+                    </div>
+                    <div>
+                      <h2 className="font-display text-lg font-bold text-navy-900">Orders</h2>
+                      <p className="mt-1 text-sm text-navy-500">
+                        Check your PayPal account for the matching payment before generating
+                        and sending a download link.
+                      </p>
+                      <div className="mt-4">
+                        <ProductOrdersManager orders={allProductOrders} productTitles={productTitles} />
+                      </div>
+                    </div>
                   </div>
                 ),
               },

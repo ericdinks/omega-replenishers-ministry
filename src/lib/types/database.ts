@@ -105,6 +105,39 @@ export type VideoCategoryAssignmentInsert = Pick<
   "video_id" | "category_id"
 >;
 
+export type ProductRow = {
+  id: string;
+  created_at: string;
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+  cover_image_url: string | null;
+  file_path: string;
+  is_active: boolean;
+  display_order: number;
+};
+
+export type ProductInsert = Pick<ProductRow, "title" | "category" | "price" | "file_path"> &
+  Partial<Pick<ProductRow, "description" | "cover_image_url" | "is_active" | "display_order">>;
+
+export type ProductOrderStatus = "pending" | "fulfilled";
+
+export type ProductOrderRow = {
+  id: string;
+  created_at: string;
+  product_id: string;
+  customer_name: string;
+  customer_email: string;
+  amount: number;
+  status: ProductOrderStatus;
+};
+
+export type ProductOrderInsert = Pick<
+  ProductOrderRow,
+  "product_id" | "customer_name" | "customer_email" | "amount"
+>;
+
 // NOTE: this must be a `type`, not an `interface`. supabase-js's generics
 // check `Database[Schema] extends GenericSchema` (which requires an index
 // signature on Tables/Views/Functions); a named `interface` never
@@ -163,6 +196,30 @@ export type Database = {
         Row: VideoCategoryAssignmentRow;
         Insert: VideoCategoryAssignmentInsert;
         Update: Partial<VideoCategoryAssignmentRow>;
+        Relationships: [];
+      };
+      products: {
+        Row: ProductRow;
+        Insert: ProductInsert;
+        Update: Partial<
+          Pick<
+            ProductRow,
+            | "title"
+            | "description"
+            | "category"
+            | "price"
+            | "cover_image_url"
+            | "file_path"
+            | "is_active"
+            | "display_order"
+          >
+        >;
+        Relationships: [];
+      };
+      product_orders: {
+        Row: ProductOrderRow;
+        Insert: ProductOrderInsert;
+        Update: Partial<Pick<ProductOrderRow, "status">>;
         Relationships: [];
       };
     };

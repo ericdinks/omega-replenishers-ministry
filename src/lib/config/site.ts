@@ -19,6 +19,7 @@ export const navLinks = [
   { label: "Live Broadcast", href: "/live-broadcast" },
   { label: "Testimonials", href: "/testimonials" },
   { label: "Giving", href: "/giving" },
+  { label: "Store", href: "/store" },
   { label: "Prayer Altar", href: "/prayer-altar" },
   { label: "Contact", href: "/contact" },
 ] as const;
