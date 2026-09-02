@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { youtubeConfig } from "@/lib/config/site";
+import { fetchPlaylistVideos, getUploadsPlaylistId } from "@/lib/youtube/playlist";
 
 export const revalidate = 0;
 
@@ -9,9 +10,10 @@ interface YouTubeSearchResponse {
 
 /**
  * Reports whether the ministry's YouTube channel currently has an active
- * live broadcast. Backed by the YouTube Data API v3 `search.list` with
- * `eventType=live`, which is the documented way to detect a live stream
- * without polling the video endpoint directly.
+ * live broadcast, and always includes a `videoId` to actually embed:
+ * the live broadcast's id while live, or the channel's most recent
+ * upload once it ends -- fetched fresh each time rather than a fixed
+ * env var, so the player never goes stale after a broadcast finishes.
  *
  * Requires YOUTUBE_API_KEY and NEXT_PUBLIC_YOUTUBE_CHANNEL_ID. If either
  * is missing, the endpoint reports `configured: false` so the UI can fall
@@ -23,7 +25,7 @@ export async function GET() {
   const channelId = youtubeConfig.channelId;
 
   if (!apiKey || !channelId) {
-    return NextResponse.json({ configured: false, isLive: false });
+    return NextResponse.json({ configured: false, isLive: false, videoId: null });
   }
 
   const params = new URLSearchParams({
@@ -42,7 +44,7 @@ export async function GET() {
 
     if (!response.ok) {
       return NextResponse.json(
-        { configured: true, isLive: false, error: "youtube_api_error" },
+        { configured: true, isLive: false, videoId: null, error: "youtube_api_error" },
         { status: 200 }
       );
     }
@@ -50,14 +52,23 @@ export async function GET() {
     const data = (await response.json()) as YouTubeSearchResponse;
     const liveVideoId = data.items?.[0]?.id?.videoId ?? null;
 
+    if (liveVideoId) {
+      return NextResponse.json({ configured: true, isLive: true, videoId: liveVideoId });
+    }
+
+    // Not live -- show the channel's actual most recent upload instead of
+    // a fixed fallback, so the player always reflects what's really there.
+    const uploadsPlaylistId = getUploadsPlaylistId(channelId);
+    const [mostRecent] = await fetchPlaylistVideos(uploadsPlaylistId, 1);
+
     return NextResponse.json({
       configured: true,
-      isLive: Boolean(liveVideoId),
-      liveVideoId,
+      isLive: false,
+      videoId: mostRecent?.videoId ?? null,
     });
   } catch {
     return NextResponse.json(
-      { configured: true, isLive: false, error: "network_error" },
+      { configured: true, isLive: false, videoId: null, error: "network_error" },
       { status: 200 }
     );
   }

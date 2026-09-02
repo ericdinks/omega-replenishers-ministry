@@ -1,23 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { youtubeConfig } from "@/lib/config/site";
 
 interface LiveStatusResponse {
   configured: boolean;
   isLive: boolean;
-  liveVideoId?: string | null;
+  videoId: string | null;
 }
 
 /**
  * Optimized 16:9 responsive embed of the ministry's YouTube broadcast.
- * Prefers the currently-live video id (detected via the YouTube Data API)
- * and falls back to the configured NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID so
- * visitors always see the most recent broadcast even when the channel is
- * offline.
+ * Shows the live broadcast while one is running, and the channel's
+ * actual most recent upload otherwise -- both fetched fresh from
+ * /api/youtube/live-status, so the player never reverts to a stale
+ * fixed video once a broadcast ends.
  */
 export function LiveBroadcastPlayer() {
-  const [liveVideoId, setLiveVideoId] = useState<string | null>(null);
+  const [videoId, setVideoId] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
@@ -31,26 +30,22 @@ export function LiveBroadcastPlayer() {
         const data = (await response.json()) as LiveStatusResponse;
         if (!cancelled) {
           setIsLive(data.isLive);
-          if (data.isLive && data.liveVideoId) {
-            setLiveVideoId(data.liveVideoId);
-          }
+          setVideoId(data.videoId);
         }
       } catch {
-        // Falls back silently to the configured video id below.
+        // Leaves videoId null; the "not configured" state below covers it.
       }
     }
 
     loadStatus();
   }, []);
 
-  const videoId = liveVideoId ?? youtubeConfig.liveVideoId;
-
   if (!videoId) {
     return (
       <div className="flex aspect-video w-full items-center justify-center rounded-xl border border-navy-100 bg-navy-50 text-center">
         <p className="max-w-sm px-6 text-sm text-navy-500">
           The broadcast player is not configured yet. Set
-          NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID in your environment variables.
+          NEXT_PUBLIC_YOUTUBE_CHANNEL_ID and YOUTUBE_API_KEY in your environment variables.
         </p>
       </div>
     );

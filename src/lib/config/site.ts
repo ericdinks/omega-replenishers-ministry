@@ -58,7 +58,6 @@ export const serviceSchedule = {
 } as const;
 
 export const youtubeConfig = {
-  liveVideoId: process.env.NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID ?? "",
   channelId: process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID ?? "",
   playlistId: process.env.NEXT_PUBLIC_YOUTUBE_PLAYLIST_ID ?? "",
 } as const;
@@ -66,6 +65,8 @@ export const youtubeConfig = {
 export const paypalConfig = {
   link: process.env.NEXT_PUBLIC_PAYPAL_LINK ?? "",
   currency: process.env.NEXT_PUBLIC_PAYPAL_CURRENCY ?? "USD",
+  /** Public Checkout client id, used by /store's embedded PayPal buttons. */
+  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ?? "",
 } as const;
 
 export const testimonyCategories = [

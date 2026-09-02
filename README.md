@@ -31,7 +31,7 @@ that file for inline documentation of each variable. In short:
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase client credentials |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only key used by `/admin` to read all prayer requests |
-| `NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID` / `NEXT_PUBLIC_YOUTUBE_CHANNEL_ID` | Powers the Live Broadcast player and pulsing live indicator |
+| `NEXT_PUBLIC_YOUTUBE_CHANNEL_ID` | Powers the Live Broadcast player and pulsing live indicator |
 | `YOUTUBE_API_KEY` | Server-side key used to detect real-time live status and fetch playlist items |
 | `NEXT_PUBLIC_YOUTUBE_PLAYLIST_ID` | The "School of the Prophets" playlist. Rotate anytime from Vercel env vars, no deploy needed beyond a redeploy |
 | `NEXT_PUBLIC_PAYPAL_LINK` / `NEXT_PUBLIC_PAYPAL_CURRENCY` | The ministry's public PayPal.Me or Donate button link |
