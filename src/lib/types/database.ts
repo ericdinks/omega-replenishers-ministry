@@ -131,6 +131,7 @@ export type ProductOrderRow = {
   customer_email: string;
   amount: number;
   status: ProductOrderStatus;
+  paypal_order_id: string | null;
 };
 
 export type ProductOrderInsert = Pick<
@@ -219,7 +220,7 @@ export type Database = {
       product_orders: {
         Row: ProductOrderRow;
         Insert: ProductOrderInsert;
-        Update: Partial<Pick<ProductOrderRow, "status">>;
+        Update: Partial<Pick<ProductOrderRow, "status" | "paypal_order_id">>;
         Relationships: [];
       };
     };

@@ -3,15 +3,16 @@
 import { productOrderSchema, type ProductOrderFormState, type ProductOrderInput } from "@/lib/validation/order";
 import { sanitizeEmail, sanitizeText } from "@/lib/utils/sanitize";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
-import { buildPaypalUrl } from "@/lib/utils/paypal";
-import { getSiteContent } from "@/lib/content/site-content";
-import { sendNotificationEmail } from "@/lib/email/resend";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Records a purchase intent and returns the exact PayPal URL to send the
- * customer to. The price is always re-read from the database here --
- * never trusted from the client -- so nothing lets a visitor pay less
- * than the real listed price.
+ * Records a pending purchase intent and returns its id, which the client
+ * uses to correlate the PayPal Checkout flow (create order -> approve ->
+ * capture, see /api/paypal/*) back to this row. The price is always
+ * re-read from the database here -- never trusted from the client -- so
+ * nothing lets a visitor pay less than the real listed price. Nothing is
+ * fulfilled or emailed at this point; that only happens once PayPal
+ * confirms the payment actually captured.
  */
 export async function createProductOrder(
   input: ProductOrderInput
@@ -32,7 +33,7 @@ export async function createProductOrder(
   const supabase = createSupabasePublicClient();
   const { data: product, error: productError } = await supabase
     .from("products")
-    .select("id, price, title")
+    .select("id, price")
     .eq("id", parsed.data.productId)
     .eq("is_active", true)
     .maybeSingle();
@@ -48,41 +49,27 @@ export async function createProductOrder(
     amount: product.price,
   };
 
-  const { error: insertError } = await supabase.from("product_orders").insert(sanitized);
+  // Uses the admin client solely to read back the generated id (RETURNING
+  // a row requires SELECT, and the public/anon role intentionally has no
+  // SELECT policy on product_orders -- customers must never be able to
+  // list each other's orders). Input above is already fully validated,
+  // sanitized, and price-verified before reaching here.
+  const admin = createSupabaseAdminClient();
+  const { data: inserted, error: insertError } = await admin
+    .from("product_orders")
+    .insert(sanitized)
+    .select("id")
+    .single();
 
-  if (insertError) {
+  if (insertError || !inserted) {
     return {
       status: "error",
       message: "We couldn't start your order right now. Please try again shortly.",
     };
   }
 
-  const paypalUrl = buildPaypalUrl(product.price);
-  if (!paypalUrl) {
-    return {
-      status: "error",
-      message: "Giving/checkout isn't configured yet. Please contact the ministry office.",
-    };
-  }
-
-  const content = await getSiteContent();
-  await sendNotificationEmail({
-    to: content.order_notification_email,
-    subject: `New order: ${product.title}`,
-    text: [
-      `A new order was just started on /store.`,
-      ``,
-      `Product: ${product.title}`,
-      `Amount: ${product.price}`,
-      `Customer: ${sanitized.customer_name} <${sanitized.customer_email}>`,
-      ``,
-      `Check your PayPal account for the matching payment, then generate and send the download link from the Store tab in /admin.`,
-    ].join("\n"),
-  });
-
   return {
     status: "success",
-    message: `Redirecting you to PayPal to complete your purchase of "${product.title}".`,
-    paypalUrl,
+    orderId: inserted.id,
   };
 }

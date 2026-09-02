@@ -18,6 +18,7 @@ export type ProductOrderInput = z.infer<typeof productOrderSchema>;
 export interface ProductOrderFormState {
   status: "idle" | "success" | "error";
   message?: string;
-  paypalUrl?: string;
+  /** The pending order's id, used to correlate the PayPal Checkout capture back to it. */
+  orderId?: string;
   fieldErrors?: Partial<Record<keyof ProductOrderInput, string>>;
 }
