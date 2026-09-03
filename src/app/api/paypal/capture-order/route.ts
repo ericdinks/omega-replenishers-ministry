@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { capturePaypalOrder } from "@/lib/paypal/api";
 import { sendNotificationEmail } from "@/lib/email/resend";
 import { getSiteContent } from "@/lib/content/site-content";
+import { buildDownloadFilename } from "@/lib/utils/filename";
 
 const SEVEN_DAYS_IN_SECONDS = 60 * 60 * 24 * 7;
 const AMOUNT_TOLERANCE = 0.01;
@@ -56,7 +57,9 @@ export async function POST(request: Request) {
 
     const { data: signed } = await admin.storage
       .from("digital-products")
-      .createSignedUrl(product.file_path, SEVEN_DAYS_IN_SECONDS);
+      .createSignedUrl(product.file_path, SEVEN_DAYS_IN_SECONDS, {
+        download: buildDownloadFilename(product.title, product.file_path),
+      });
 
     return NextResponse.json({ downloadUrl: signed?.signedUrl, productTitle: product.title });
   }
@@ -112,7 +115,9 @@ export async function POST(request: Request) {
 
   const { data: signed, error: signError } = await admin.storage
     .from("digital-products")
-    .createSignedUrl(product.file_path, SEVEN_DAYS_IN_SECONDS);
+    .createSignedUrl(product.file_path, SEVEN_DAYS_IN_SECONDS, {
+      download: buildDownloadFilename(product.title, product.file_path),
+    });
 
   if (signError || !signed) {
     console.error("capture-order: failed to create signed url:", signError);

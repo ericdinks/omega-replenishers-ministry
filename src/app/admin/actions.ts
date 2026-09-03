@@ -17,6 +17,7 @@ import type {
   VideoSourceType,
 } from "@/lib/types/database";
 import type { SiteContent } from "@/lib/content/site-content";
+import { buildDownloadFilename } from "@/lib/utils/filename";
 
 /** Every page whose text/media comes from Supabase; revalidated after an edit. */
 const CONTENT_DEPENDENT_PATHS = ["/", "/about", "/contact"] as const;
@@ -599,7 +600,7 @@ export async function generateProductDownloadLink(productId: string): Promise<st
   const admin = createSupabaseAdminClient();
   const { data: product, error: productError } = await admin
     .from("products")
-    .select("file_path")
+    .select("file_path, title")
     .eq("id", productId)
     .maybeSingle();
 
@@ -610,7 +611,9 @@ export async function generateProductDownloadLink(productId: string): Promise<st
   const SEVEN_DAYS_IN_SECONDS = 60 * 60 * 24 * 7;
   const { data, error } = await admin.storage
     .from("digital-products")
-    .createSignedUrl(product.file_path, SEVEN_DAYS_IN_SECONDS);
+    .createSignedUrl(product.file_path, SEVEN_DAYS_IN_SECONDS, {
+      download: buildDownloadFilename(product.title, product.file_path),
+    });
 
   if (error || !data) {
     throw new Error("Failed to generate a download link.");
