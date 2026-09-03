@@ -2,11 +2,124 @@
 
 import Image from "next/image";
 import { useState, useTransition } from "react";
-import { BookOpen, Image as ImageIcon, Loader2, Save, Trash2, Upload } from "lucide-react";
-import { createProduct, deleteProduct, setProductActive, updateProduct } from "@/app/admin/actions";
+import { BookOpen, Check, Copy, FileText, Image as ImageIcon, Loader2, Save, Trash2, Upload } from "lucide-react";
+import {
+  createProduct,
+  deleteProduct,
+  generateProductDownloadLink,
+  replaceProductFile,
+  setProductActive,
+  updateProduct,
+} from "@/app/admin/actions";
 import { uploadDigitalProductFile, uploadMediaFile } from "@/lib/supabase/upload";
 import { paypalConfig } from "@/lib/config/site";
 import type { ProductRow } from "@/lib/types/database";
+
+/** file_path is stored as e.g. "products/1234567890.pdf" -- just show the filename. */
+function fileNameFromPath(filePath: string): string {
+  return filePath.split("/").pop() ?? filePath;
+}
+
+function ProductFileSection({ product }: { product: ProductRow }) {
+  const [link, setLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isGenerating, startGenerating] = useTransition();
+  const [isReplacing, startReplacing] = useTransition();
+
+  function handleGetLink() {
+    setError(null);
+    startGenerating(async () => {
+      try {
+        const url = await generateProductDownloadLink(product.id);
+        setLink(url);
+        setCopied(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to generate link.");
+      }
+    });
+  }
+
+  async function handleCopy() {
+    if (!link) return;
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleReplaceFile(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    startReplacing(async () => {
+      try {
+        const extension = file.name.split(".").pop() ?? "bin";
+        const newPath = `products/${Date.now()}.${extension}`;
+        await uploadDigitalProductFile(file, newPath);
+        await replaceProductFile(product.id, newPath);
+        setLink(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to replace the file.");
+      }
+    });
+  }
+
+  return (
+    <div className="mt-2 rounded-md border border-navy-100 bg-navy-50 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-sm text-navy-700">
+          <FileText className="h-4 w-4 text-navy-400" />
+          {fileNameFromPath(product.file_path)}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={handleGetLink}
+            className="text-xs font-medium text-navy-600 hover:text-gold-700 disabled:opacity-60"
+          >
+            {isGenerating ? <Loader2 className="inline h-3.5 w-3.5 animate-spin" /> : "Preview / Get Link"}
+          </button>
+          <label className="cursor-pointer text-xs font-medium text-navy-600 hover:text-gold-700">
+            {isReplacing ? <Loader2 className="inline h-3.5 w-3.5 animate-spin" /> : "Replace File"}
+            <input
+              type="file"
+              className="hidden"
+              disabled={isReplacing}
+              onChange={(e) => handleReplaceFile(e.target.files?.[0])}
+            />
+          </label>
+        </div>
+      </div>
+
+      {link ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            readOnly
+            value={link}
+            className="min-w-0 flex-1 rounded-md border border-navy-200 bg-white px-3 py-1.5 text-xs text-navy-700"
+          />
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1.5 rounded-md border border-navy-200 bg-white px-2.5 py-1.5 text-xs font-medium text-navy-700 hover:border-gold"
+          >
+            {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-gold-700 hover:underline"
+          >
+            Open
+          </a>
+        </div>
+      ) : null}
+      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
 
 function ProductRowItem({ product }: { product: ProductRow }) {
   const [title, setTitle] = useState(product.title);
@@ -95,6 +208,8 @@ function ProductRowItem({ product }: { product: ProductRow }) {
             placeholder="Description"
             className="block w-full rounded-md border border-navy-200 px-3 py-2 text-sm text-navy-900 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
           />
+
+          <ProductFileSection product={product} />
 
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 

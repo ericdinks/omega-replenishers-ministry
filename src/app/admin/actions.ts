@@ -505,6 +505,36 @@ export async function updateProduct(
   revalidatePath("/admin");
 }
 
+/**
+ * Swaps a product's underlying file for a newly-uploaded one (already
+ * uploaded to the private digital-products bucket by the caller) and
+ * removes the old file so it doesn't linger in storage unused.
+ */
+export async function replaceProductFile(id: string, newFilePath: string) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: existing } = await admin
+    .from("products")
+    .select("file_path")
+    .eq("id", id)
+    .maybeSingle();
+
+  const { error } = await admin.from("products").update({ file_path: newFilePath }).eq("id", id);
+
+  if (error) {
+    throw new Error("Failed to update the product's file.");
+  }
+
+  if (existing?.file_path && existing.file_path !== newFilePath) {
+    await admin.storage.from("digital-products").remove([existing.file_path]);
+  }
+
+  revalidatePath("/store");
+  revalidatePath("/admin");
+}
+
 export async function setProductActive(id: string, isActive: boolean) {
   await assertAuthenticated();
 
