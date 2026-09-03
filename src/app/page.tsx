@@ -18,7 +18,11 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero title={content.hero_title} description={content.hero_description} />
+      <Hero
+        title={content.hero_title}
+        description={content.hero_description}
+        imageUrl={content.hero_image_url}
+      />
       <AnnouncementsBanner announcements={announcements} />
       <QuickLinks />
       <VideoMessageSection message={videoMessage} />

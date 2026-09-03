@@ -7,9 +7,10 @@ import { pastorConfig, siteConfig } from "@/lib/config/site";
 interface HeroProps {
   title: string;
   description: string;
+  imageUrl?: string;
 }
 
-export function Hero({ title, description }: HeroProps) {
+export function Hero({ title, description, imageUrl }: HeroProps) {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-gold-50 via-white to-white">
       <div
@@ -55,7 +56,7 @@ export function Hero({ title, description }: HeroProps) {
           />
           <div className="overflow-hidden rounded-3xl border-4 border-white shadow-2xl ring-1 ring-navy-100">
             <Image
-              src={pastorConfig.heroPhotoSrc}
+              src={imageUrl || pastorConfig.heroPhotoSrc}
               alt={pastorConfig.name}
               width={800}
               height={1000}

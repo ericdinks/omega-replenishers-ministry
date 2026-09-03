@@ -8,6 +8,7 @@ import { createSupabasePublicClient } from "@/lib/supabase/public";
 export const SITE_CONTENT_KEYS = [
   "hero_title",
   "hero_description",
+  "hero_image_url",
   "about_description",
   "about_bio",
   "contact_phone",
@@ -32,6 +33,9 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   hero_title: "Encounter the Prophetic Word That Changes Nations",
   hero_description:
     "A global ministry under Prophet Shedrack A. O., gathering people from every nation for continual intercession that replenishes the Earth. Join us live, grow through the School of the Prophets, and bring your prayer needs to the altar.",
+  // Empty by default -- Hero falls back to pastorConfig.heroPhotoSrc (the
+  // bundled static image) until an admin uploads a replacement.
+  hero_image_url: "",
   about_description:
     "A global ministry under Prophet Shedrack A. O., gathering people from every nation for continual intercession that replenishes the Earth.",
   about_bio:
