@@ -18,7 +18,7 @@ export default function LiveBroadcastPage() {
           description="Tune in for live services, prophetic ministration, and impartation from anywhere in the world."
         />
 
-        <div className="mx-auto mt-12 max-w-4xl">
+        <div className="mt-12">
           <LiveBroadcastPlayer />
         </div>
 
