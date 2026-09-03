@@ -117,12 +117,21 @@ export async function capturePaypalOrder(paypalOrderId: string): Promise<PaypalC
 
   const data = (await response.json()) as {
     status?: string;
+    name?: string;
+    message?: string;
     purchase_units?: Array<{
       payments?: {
         captures?: Array<{ amount?: { value?: string; currency_code?: string } }>;
       };
     }>;
   };
+
+  if (!response.ok) {
+    // Surface PayPal's real error (e.g. ORDER_ALREADY_CAPTURED) instead of
+    // silently returning an "UNKNOWN" status that masks what happened.
+    console.error("PayPal capture failed:", response.status, data.name, data.message);
+    throw new Error(data.message ?? `PayPal capture failed (${data.name ?? response.status}).`);
+  }
 
   const capture = data.purchase_units?.[0]?.payments?.captures?.[0];
 

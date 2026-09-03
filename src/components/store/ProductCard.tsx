@@ -27,6 +27,7 @@ export function ProductCard({ product }: { product: ProductRow }) {
   const [isPending, startTransition] = useTransition();
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   const buttonsRenderedRef = useRef(false);
+  const captureInFlightRef = useRef(false);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,16 +77,28 @@ export function ProductCard({ product }: { product: ProductRow }) {
               return data.paypalOrderId;
             },
             onApprove: async (data) => {
-              const response = await fetch("/api/paypal/capture-order", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ paypalOrderId: data.orderID, orderId }),
-              });
-              const result = await response.json();
-              if (result.downloadUrl) {
-                setDownloadUrl(result.downloadUrl);
-              } else {
-                setError(result.error ?? "Payment could not be confirmed. Please contact the ministry office.");
+              // The PayPal SDK can fire onApprove more than once for a
+              // single approval; guard against sending two concurrent
+              // capture requests for the same order.
+              if (captureInFlightRef.current) return;
+              captureInFlightRef.current = true;
+
+              try {
+                const response = await fetch("/api/paypal/capture-order", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ paypalOrderId: data.orderID, orderId }),
+                });
+                const result = await response.json();
+                if (result.downloadUrl) {
+                  setDownloadUrl(result.downloadUrl);
+                } else {
+                  setError(result.error ?? "Payment could not be confirmed. Please contact the ministry office.");
+                  captureInFlightRef.current = false;
+                }
+              } catch {
+                setError("Payment could not be confirmed. Please contact the ministry office.");
+                captureInFlightRef.current = false;
               }
             },
             onError: () => {

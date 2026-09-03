@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (orderError || !order) {
+    if (orderError) console.error("capture-order: failed to load order:", orderError);
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
 
@@ -92,6 +93,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (productError || !product) {
+    if (productError) console.error("capture-order: failed to load product:", productError);
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
   }
 
@@ -101,7 +103,11 @@ export async function POST(request: Request) {
     .eq("id", orderId);
 
   if (updateError) {
-    return NextResponse.json({ error: "Failed to record the fulfilled order." }, { status: 500 });
+    console.error("capture-order: failed to mark order fulfilled:", updateError);
+    return NextResponse.json(
+      { error: `Failed to record the fulfilled order: ${updateError.message}` },
+      { status: 500 }
+    );
   }
 
   const { data: signed, error: signError } = await admin.storage
@@ -109,6 +115,7 @@ export async function POST(request: Request) {
     .createSignedUrl(product.file_path, SEVEN_DAYS_IN_SECONDS);
 
   if (signError || !signed) {
+    console.error("capture-order: failed to create signed url:", signError);
     return NextResponse.json({ error: "Payment succeeded but the download link failed to generate. Contact the ministry office." }, { status: 500 });
   }
 

@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (error || !product) {
+    if (error) console.error("create-order: failed to load product:", error);
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
   }
 
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
     const paypalOrderId = await createPaypalOrder(product.price, paypalConfig.currency);
     return NextResponse.json({ paypalOrderId });
   } catch (err) {
+    console.error("create-order: PayPal order creation failed:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to create PayPal order." },
       { status: 502 }
