@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Copy, Loader2, Mail } from "lucide-react";
-import { generateProductDownloadLink, setProductOrderStatus } from "@/app/admin/actions";
+import { Check, Copy, Loader2, Mail, Trash2 } from "lucide-react";
+import { deleteProductOrder, generateProductDownloadLink, setProductOrderStatus } from "@/app/admin/actions";
 import { paypalConfig } from "@/lib/config/site";
 import type { ProductOrderRow } from "@/lib/types/database";
 
@@ -22,6 +22,11 @@ function OrderRow({
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, startGenerating] = useTransition();
   const [isUpdating, startUpdating] = useTransition();
+  const [isDeleting, startDeleting] = useTransition();
+
+  function handleDelete() {
+    startDeleting(() => deleteProductOrder(order.id));
+  }
 
   function handleGenerateLink() {
     setError(null);
@@ -83,6 +88,15 @@ function OrderRow({
             className="text-xs font-medium text-navy-600 hover:text-gold-700 disabled:opacity-60"
           >
             {order.status === "fulfilled" ? "Mark Pending" : "Mark Fulfilled"}
+          </button>
+          <button
+            type="button"
+            disabled={isDeleting}
+            onClick={handleDelete}
+            aria-label="Delete order"
+            className="text-navy-400 hover:text-red-600 disabled:opacity-60"
+          >
+            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
           </button>
         </div>
       </div>

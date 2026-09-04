@@ -588,6 +588,20 @@ export async function setProductOrderStatus(id: string, status: ProductOrderStat
   revalidatePath("/admin");
 }
 
+/** Permanently removes an order (e.g. test orders, duplicates). */
+export async function deleteProductOrder(id: string) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("product_orders").delete().eq("id", id);
+
+  if (error) {
+    throw new Error("Failed to delete the order.");
+  }
+
+  revalidatePath("/admin");
+}
+
 /**
  * Generates a time-limited signed URL for a product's file so the
  * operator can send it to a customer once payment is confirmed in
