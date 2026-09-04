@@ -13,12 +13,21 @@ import "server-only";
  * that should ever block a customer's order from being recorded.
  */
 export async function sendNotificationEmail(options: {
+  /** One email, or several separated by commas/semicolons -- e.g. from the
+   *  order_notification_email site_content setting. */
   to: string;
   subject: string;
   text: string;
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
+
+  const recipients = options.to
+    .split(/[,;]/)
+    .map((address) => address.trim())
+    .filter(Boolean);
+
+  if (recipients.length === 0) return;
 
   try {
     await fetch("https://api.resend.com/emails", {
@@ -29,7 +38,7 @@ export async function sendNotificationEmail(options: {
       },
       body: JSON.stringify({
         from: "Omega Replenishers Store <onboarding@resend.dev>",
-        to: [options.to],
+        to: recipients,
         subject: options.subject,
         text: options.text,
       }),

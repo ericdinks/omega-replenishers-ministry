@@ -21,7 +21,8 @@ const FIELDS: Array<{
   { key: "contact_address", label: "Contact Address / Location" },
   {
     key: "order_notification_email",
-    label: "Store Order Notification Email (must match the Resend account's own email until a domain is verified)",
+    label:
+      "Store Order Notification Email(s) -- separate multiple with commas (must match the Resend account's own email until a domain is verified)",
   },
 ];
 
