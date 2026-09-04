@@ -25,6 +25,7 @@ function OrderRow({
   const [isDeleting, startDeleting] = useTransition();
 
   function handleDelete() {
+    if (!window.confirm("Delete this order permanently? This can't be undone.")) return;
     startDeleting(() => deleteProductOrder(order.id));
   }
 
