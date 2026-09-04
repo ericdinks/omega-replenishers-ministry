@@ -4,8 +4,10 @@ import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister";
-import { siteConfig } from "@/lib/config/site";
+import { pastorConfig, siteConfig, socialLinks } from "@/lib/config/site";
 import { getSiteContent } from "@/lib/content/site-content";
+
+const SITE_URL = "https://www.omegareplenishers.com";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,6 +23,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: siteConfig.name,
     template: `%s | ${siteConfig.shortName}`,
@@ -36,6 +39,36 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: siteConfig.shortName,
   },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [{ url: pastorConfig.heroPhotoSrc, width: 800, height: 1000 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [pastorConfig.heroPhotoSrc],
+  },
+};
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ReligiousOrganization",
+  name: siteConfig.name,
+  url: SITE_URL,
+  logo: `${SITE_URL}${pastorConfig.photoSrc}`,
+  founder: {
+    "@type": "Person",
+    name: pastorConfig.name,
+  },
+  sameAs: [socialLinks.youtube, socialLinks.facebook, socialLinks.tiktok].filter(Boolean),
 };
 
 export const viewport: Viewport = {
@@ -52,6 +85,10 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="flex min-h-screen flex-col font-sans">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
         <ServiceWorkerRegister />
         <Navbar />
         <main className="flex-1">{children}</main>
