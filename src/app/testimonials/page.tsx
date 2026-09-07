@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Testimonials",
   description:
     "Real miracle and breakthrough reports from the Omega Replenishers International Ministry community.",
+  alternates: { canonical: "/testimonials" },
 };
 
 export const revalidate = 60;

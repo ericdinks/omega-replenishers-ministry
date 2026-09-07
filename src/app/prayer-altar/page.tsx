@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Prayer Altar",
   description:
     "Bring your confidential prayer request before the Omega Replenishers International Ministry prayer team.",
+  alternates: { canonical: "/prayer-altar" },
 };
 
 export default function PrayerAltarPage() {

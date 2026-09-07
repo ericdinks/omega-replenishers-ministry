@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "School of the Prophets",
   description:
     "Grow in prophetic ministry through structured teaching series from Prophet Shedrack A. O.",
+  alternates: { canonical: "/school-of-the-prophets" },
 };
 
 export const revalidate = 300;

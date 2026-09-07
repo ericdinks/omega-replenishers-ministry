@@ -7,6 +7,7 @@ import { siteConfig } from "@/lib/config/site";
 export const metadata: Metadata = {
   title: "Store",
   description: `E-books, music, and other resources from ${siteConfig.name}.`,
+  alternates: { canonical: "/store" },
 };
 
 export const revalidate = 30;

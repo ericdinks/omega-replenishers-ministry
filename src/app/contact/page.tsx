@@ -8,6 +8,7 @@ import { getSiteContent } from "@/lib/content/site-content";
 export const metadata: Metadata = {
   title: "Contact",
   description: `Reach ${siteConfig.name} by phone, WhatsApp, or email, and find our broadcast schedule.`,
+  alternates: { canonical: "/contact" },
 };
 
 export const revalidate = 30;

@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: "Teachings",
   description:
     "Browse teachings and short clips from Omega Replenishers International Ministry, organized by topic.",
+  alternates: { canonical: "/teachings" },
 };
 
 export const revalidate = 30;

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Hero } from "@/components/home/Hero";
 import { QuickLinks } from "@/components/home/QuickLinks";
 import { GivingCta } from "@/components/home/GivingCta";
@@ -6,6 +7,10 @@ import { AnnouncementsBanner } from "@/components/home/AnnouncementsBanner";
 import { getSiteContent } from "@/lib/content/site-content";
 import { getActiveVideoMessage } from "@/lib/content/video-message";
 import { getActiveAnnouncements } from "@/lib/content/announcements";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export const revalidate = 30;
 

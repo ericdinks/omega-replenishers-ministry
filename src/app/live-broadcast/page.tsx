@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Live Broadcast",
   description:
     "Join Omega Replenishers International Ministry live for every service, broadcast in real time.",
+  alternates: { canonical: "/live-broadcast" },
 };
 
 export default function LiveBroadcastPage() {

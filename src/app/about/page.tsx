@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: "About the Ministry",
   description:
     "The mandate and leadership behind Omega Replenishers International Ministry, founded by Prophet Shedrack A. O.",
+  alternates: { canonical: "/about" },
 };
 
 export const revalidate = 30;

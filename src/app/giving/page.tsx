@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Giving",
   description:
     "Support Omega Replenishers International Ministry through tithes, offerings, and kingdom seed via PayPal.",
+  alternates: { canonical: "/giving" },
 };
 
 export const revalidate = 30;
