@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   "/about",
   "/school-of-the-prophets",
   "/teachings",
+  "/gallery",
   "/live-broadcast",
   "/testimonials",
   "/giving",

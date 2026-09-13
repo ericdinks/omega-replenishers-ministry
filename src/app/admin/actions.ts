@@ -8,6 +8,7 @@ import type {
   AnnouncementInsert,
   DonationTierInsert,
   DonationTierRow,
+  PhotoInsert,
   PrayerRequestStatus,
   ProductInsert,
   ProductOrderStatus,
@@ -634,4 +635,36 @@ export async function generateProductDownloadLink(productId: string): Promise<st
   }
 
   return data.signedUrl;
+}
+
+/** Adds one or more photos (already uploaded to the media bucket) to an album. */
+export async function createPhotos(photos: PhotoInsert[]) {
+  await assertAuthenticated();
+
+  if (photos.length === 0) return;
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("photos").insert(photos);
+
+  if (error) {
+    throw new Error("Failed to save the uploaded photos.");
+  }
+
+  revalidatePath("/gallery");
+  revalidatePath("/admin");
+}
+
+/** Permanently deletes a gallery photo (row only -- the file is left in Storage). */
+export async function deletePhoto(id: string) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("photos").delete().eq("id", id);
+
+  if (error) {
+    throw new Error("Failed to delete the photo.");
+  }
+
+  revalidatePath("/gallery");
+  revalidatePath("/admin");
 }

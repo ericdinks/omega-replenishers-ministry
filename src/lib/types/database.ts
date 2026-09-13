@@ -139,6 +139,18 @@ export type ProductOrderInsert = Pick<
   "product_id" | "customer_name" | "customer_email" | "amount"
 >;
 
+export type PhotoRow = {
+  id: string;
+  created_at: string;
+  image_url: string;
+  caption: string;
+  album: string;
+  display_order: number;
+};
+
+export type PhotoInsert = Pick<PhotoRow, "image_url" | "album"> &
+  Partial<Pick<PhotoRow, "caption" | "display_order">>;
+
 // NOTE: this must be a `type`, not an `interface`. supabase-js's generics
 // check `Database[Schema] extends GenericSchema` (which requires an index
 // signature on Tables/Views/Functions); a named `interface` never
@@ -221,6 +233,12 @@ export type Database = {
         Row: ProductOrderRow;
         Insert: ProductOrderInsert;
         Update: Partial<Pick<ProductOrderRow, "status" | "paypal_order_id">>;
+        Relationships: [];
+      };
+      photos: {
+        Row: PhotoRow;
+        Insert: PhotoInsert;
+        Update: Partial<Pick<PhotoRow, "caption" | "album" | "display_order">>;
         Relationships: [];
       };
     };

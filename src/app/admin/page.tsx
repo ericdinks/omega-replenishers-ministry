@@ -12,6 +12,7 @@ import { VideoLimitSetting } from "@/components/admin/VideoLimitSetting";
 import { AdminUsersManager, type AdminUserSummary } from "@/components/admin/AdminUsersManager";
 import { ProductsManager } from "@/components/admin/ProductsManager";
 import { ProductOrdersManager } from "@/components/admin/ProductOrdersManager";
+import { PhotosManager } from "@/components/admin/PhotosManager";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { signOutAdmin } from "@/app/admin/actions";
 import { youtubeConfig } from "@/lib/config/site";
@@ -48,6 +49,7 @@ export default async function AdminDashboardPage() {
     },
     { data: products },
     { data: productOrders },
+    { data: photos },
   ] = await Promise.all([
     admin.from("prayer_requests").select("*").order("created_at", { ascending: false }),
     admin
@@ -66,6 +68,11 @@ export default async function AdminDashboardPage() {
     serverClient.auth.getUser(),
     admin.from("products").select("*").order("display_order", { ascending: true }),
     admin.from("product_orders").select("*").order("created_at", { ascending: false }),
+    admin
+      .from("photos")
+      .select("*")
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: false }),
   ]);
 
   const allRequests = requests ?? [];
@@ -85,6 +92,7 @@ export default async function AdminDashboardPage() {
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const allProducts = products ?? [];
   const allProductOrders = productOrders ?? [];
+  const allPhotos = photos ?? [];
   const productTitles: Record<string, string> = Object.fromEntries(
     allProducts.map((product) => [product.id, product.title])
   );
@@ -186,6 +194,11 @@ export default async function AdminDashboardPage() {
                     />
                   </div>
                 ),
+              },
+              {
+                id: "pictures",
+                label: "Pictures",
+                content: <PhotosManager photos={allPhotos} />,
               },
               {
                 id: "store",

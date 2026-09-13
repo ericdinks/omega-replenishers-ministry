@@ -16,6 +16,7 @@ export const navLinks = [
   { label: "About", href: "/about" },
   { label: "School of the Prophets", href: "/school-of-the-prophets" },
   { label: "Teachings", href: "/teachings" },
+  { label: "Pictures", href: "/gallery" },
   { label: "Live Broadcast", href: "/live-broadcast" },
   { label: "Testimonials", href: "/testimonials" },
   { label: "Giving", href: "/giving" },
