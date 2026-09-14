@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { createPhotos, deletePhoto, reorderPhotos } from "@/app/admin/actions";
 import { uploadMediaFile } from "@/lib/supabase/upload";
@@ -33,8 +33,16 @@ export function PhotosManager({ photos }: { photos: PhotoRow[] }) {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, startUploading] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const albums = groupByAlbum(photos);
+
+  function addFiles(incoming: FileList | null) {
+    const imagesOnly = Array.from(incoming ?? []).filter((f) => f.type.startsWith("image/"));
+    if (imagesOnly.length > 0) setError(null);
+    setFiles((prev) => [...prev, ...imagesOnly]);
+  }
 
   function handleUpload() {
     if (files.length === 0) {
@@ -129,17 +137,54 @@ export function PhotosManager({ photos }: { photos: PhotoRow[] }) {
             placeholder="Caption applied to all uploaded pictures (optional)"
             className="block w-full rounded-md border border-navy-200 px-4 py-2.5 text-sm text-navy-900 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
           />
-          <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-navy-300 px-4 py-3 text-sm text-navy-600 hover:border-gold">
-            <ImagePlus className="h-4 w-4" />
-            {files.length > 0 ? `${files.length} picture(s) selected` : "Choose pictures"}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDraggingOver(true);
+            }}
+            onDragLeave={() => setIsDraggingOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDraggingOver(false);
+              addFiles(e.dataTransfer.files);
+            }}
+            className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-md border border-dashed px-4 py-6 text-center text-sm transition-colors ${
+              isDraggingOver
+                ? "border-gold bg-gold-50 text-gold-700"
+                : "border-navy-300 text-navy-600 hover:border-gold"
+            }`}
+          >
+            <ImagePlus className="h-5 w-5" />
+            {files.length > 0 ? (
+              <span>{files.length} picture(s) selected -- click or drop to add more</span>
+            ) : (
+              <span>Drag &amp; drop pictures here, or click to choose</span>
+            )}
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               multiple
               className="hidden"
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+              onChange={(e) => addFiles(e.target.files)}
             />
-          </label>
+          </div>
+
+          {files.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setFiles([])}
+              className="text-xs font-medium text-navy-400 hover:text-red-600"
+            >
+              Clear selected pictures
+            </button>
+          ) : null}
 
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
