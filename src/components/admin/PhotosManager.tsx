@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState, useTransition } from "react";
-import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { GripVertical, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { createPhotos, deletePhoto, reorderPhotos } from "@/app/admin/actions";
 import { uploadMediaFile } from "@/lib/supabase/upload";
 import type { PhotoRow } from "@/lib/types/database";
@@ -26,6 +26,13 @@ function groupByAlbum(photos: PhotoRow[]): PhotoAlbum[] {
   return albumOrder.map((album) => ({ album, photos: grouped.get(album)! }));
 }
 
+function movePhoto(photos: PhotoRow[], fromIndex: number, toIndex: number): PhotoRow[] {
+  const next = [...photos];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved!);
+  return next;
+}
+
 export function PhotosManager({ photos }: { photos: PhotoRow[] }) {
   const [album, setAlbum] = useState("");
   const [caption, setCaption] = useState("");
@@ -36,7 +43,11 @@ export function PhotosManager({ photos }: { photos: PhotoRow[] }) {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const albums = groupByAlbum(photos);
+  const [albums, setAlbums] = useState<PhotoAlbum[]>(() => groupByAlbum(photos));
+  useEffect(() => setAlbums(groupByAlbum(photos)), [photos]);
+
+  const [dragged, setDragged] = useState<{ albumIndex: number; index: number } | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
   function addFiles(incoming: FileList | null) {
     const imagesOnly = Array.from(incoming ?? []).filter((f) => f.type.startsWith("image/"));
@@ -95,20 +106,28 @@ export function PhotosManager({ photos }: { photos: PhotoRow[] }) {
     }
   }
 
-  async function handleMove(albumPhotos: PhotoRow[], index: number, direction: -1 | 1) {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= albumPhotos.length) return;
+  async function handleDrop(albumIndex: number, targetIndex: number) {
+    setDragOverKey(null);
+    if (!dragged || dragged.albumIndex !== albumIndex) {
+      setDragged(null);
+      return;
+    }
+    if (dragged.index === targetIndex) {
+      setDragged(null);
+      return;
+    }
 
-    const reordered = [...albumPhotos];
-    const temp = reordered[index]!;
-    reordered[index] = reordered[targetIndex]!;
-    reordered[targetIndex] = temp;
+    const previousAlbums = albums;
+    const reorderedPhotos = movePhoto(albums[albumIndex]!.photos, dragged.index, targetIndex);
+    const nextAlbums = albums.map((a, i) => (i === albumIndex ? { ...a, photos: reorderedPhotos } : a));
+    setAlbums(nextAlbums);
+    setDragged(null);
 
-    setPendingId(temp.id);
     try {
-      await reorderPhotos(reordered.map((photo, i) => ({ id: photo.id, display_order: i })));
-    } finally {
-      setPendingId(null);
+      await reorderPhotos(reorderedPhotos.map((photo, i) => ({ id: photo.id, display_order: i })));
+    } catch {
+      setAlbums(previousAlbums);
+      window.alert("Failed to save the new order. Please try again.");
     }
   }
 
@@ -204,58 +223,63 @@ export function PhotosManager({ photos }: { photos: PhotoRow[] }) {
         {albums.length === 0 ? (
           <p className="text-sm text-navy-400">No pictures uploaded yet.</p>
         ) : (
-          albums.map(({ album: albumName, photos: albumPhotos }) => (
+          albums.map(({ album: albumName, photos: albumPhotos }, albumIndex) => (
             <div key={albumName}>
               <h4 className="font-display text-sm font-bold text-navy-900">{albumName}</h4>
+              {albumPhotos.length > 1 ? (
+                <p className="mt-0.5 text-xs text-navy-400">Drag pictures to reorder them.</p>
+              ) : null}
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {albumPhotos.map((photo, index) => (
-                  <div
-                    key={photo.id}
-                    className="group relative aspect-square overflow-hidden rounded-lg border border-navy-100 bg-navy-50"
-                  >
-                    <Image
-                      src={photo.image_url}
-                      alt={photo.caption || albumName}
-                      fill
-                      sizes="(min-width: 768px) 25vw, 33vw"
-                      className="object-cover"
-                    />
-                    <button
-                      type="button"
-                      disabled={pendingId === photo.id}
-                      onClick={() => handleDelete(photo.id)}
-                      aria-label="Delete picture"
-                      className="absolute right-1.5 top-1.5 rounded-full bg-navy-900/70 p-1.5 text-white opacity-0 transition-opacity hover:bg-red-600 disabled:opacity-100 group-hover:opacity-100"
+                {albumPhotos.map((photo, index) => {
+                  const key = `${albumIndex}-${index}`;
+                  return (
+                    <div
+                      key={photo.id}
+                      draggable
+                      onDragStart={(e) => {
+                        setDragged({ albumIndex, index });
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragEnter={() => setDragOverKey(key)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDragEnd={() => {
+                        setDragged(null);
+                        setDragOverKey(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleDrop(albumIndex, index);
+                      }}
+                      className={`group relative aspect-square cursor-grab overflow-hidden rounded-lg border bg-navy-50 active:cursor-grabbing ${
+                        dragOverKey === key ? "border-gold ring-2 ring-gold" : "border-navy-100"
+                      } ${dragged?.albumIndex === albumIndex && dragged.index === index ? "opacity-40" : ""}`}
                     >
-                      {pendingId === photo.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-
-                    <div className="absolute bottom-1.5 left-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Image
+                        src={photo.image_url}
+                        alt={photo.caption || albumName}
+                        fill
+                        sizes="(min-width: 768px) 25vw, 33vw"
+                        className="pointer-events-none object-cover"
+                      />
+                      <div className="absolute left-1.5 top-1.5 rounded-full bg-navy-900/70 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        <GripVertical className="h-3.5 w-3.5" />
+                      </div>
                       <button
                         type="button"
-                        disabled={pendingId !== null || index === 0}
-                        onClick={() => handleMove(albumPhotos, index, -1)}
-                        aria-label="Move picture earlier"
-                        className="rounded-full bg-navy-900/70 p-1.5 text-white hover:bg-navy-900 disabled:pointer-events-none disabled:opacity-30"
+                        disabled={pendingId === photo.id}
+                        onClick={() => handleDelete(photo.id)}
+                        aria-label="Delete picture"
+                        className="absolute right-1.5 top-1.5 rounded-full bg-navy-900/70 p-1.5 text-white opacity-0 transition-opacity hover:bg-red-600 disabled:opacity-100 group-hover:opacity-100"
                       >
-                        <ChevronLeft className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={pendingId !== null || index === albumPhotos.length - 1}
-                        onClick={() => handleMove(albumPhotos, index, 1)}
-                        aria-label="Move picture later"
-                        className="rounded-full bg-navy-900/70 p-1.5 text-white hover:bg-navy-900 disabled:pointer-events-none disabled:opacity-30"
-                      >
-                        <ChevronRight className="h-3.5 w-3.5" />
+                        {pendingId === photo.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
                       </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))
