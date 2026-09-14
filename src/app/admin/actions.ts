@@ -654,6 +654,32 @@ export async function createPhotos(photos: PhotoInsert[]) {
   revalidatePath("/admin");
 }
 
+/**
+ * Persists a full, freshly-renumbered display_order for every photo in one
+ * album (the client recomputes the whole sequence after a move up/down, so
+ * this always writes consistent 0..n-1 values instead of swapping two
+ * possibly-tied raw values).
+ */
+export async function reorderPhotos(updates: { id: string; display_order: number }[]) {
+  await assertAuthenticated();
+
+  if (updates.length === 0) return;
+
+  const admin = createSupabaseAdminClient();
+  const results = await Promise.all(
+    updates.map(({ id, display_order }) =>
+      admin.from("photos").update({ display_order }).eq("id", id)
+    )
+  );
+
+  if (results.some((r) => r.error)) {
+    throw new Error("Failed to reorder the pictures.");
+  }
+
+  revalidatePath("/gallery");
+  revalidatePath("/admin");
+}
+
 /** Permanently deletes a gallery photo (row only -- the file is left in Storage). */
 export async function deletePhoto(id: string) {
   await assertAuthenticated();
