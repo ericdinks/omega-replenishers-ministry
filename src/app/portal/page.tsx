@@ -89,6 +89,19 @@ export default async function PortalPage() {
           </div>
         ) : null}
 
+        {role === "admin" ? (
+          <div className="mt-8 rounded-lg border border-navy-100 bg-navy-50 p-5 text-center">
+            <p className="text-sm text-navy-600">
+              You&apos;re signed in as a ministry admin. Create teacher accounts and confirm
+              course payments from the{" "}
+              <Link href="/admin" className="font-medium text-gold-700 hover:underline">
+                Training Portal tab in /admin
+              </Link>
+              . This page below is what students and teachers see.
+            </p>
+          </div>
+        ) : null}
+
         <div className="mt-14">
           <h2 className="font-display text-xl font-bold text-navy-900">
             {role === "student" ? "All Courses" : "Available Courses"}
