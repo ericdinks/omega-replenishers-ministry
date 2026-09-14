@@ -58,11 +58,8 @@ export function CourseEnrollPanel({
   function handleEnroll() {
     setError(null);
     startEnrolling(async () => {
-      try {
-        await enrollInCourse(course.id, course.price);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to enroll.");
-      }
+      const result = await enrollInCourse(course.id, course.price);
+      if (result.error) setError(result.error);
     });
   }
 

@@ -19,18 +19,18 @@ export function CreateCourseForm() {
     setError(null);
 
     startCreating(async () => {
-      try {
-        await createCourse({
-          title: title.trim(),
-          description: description.trim(),
-          price: Number.parseFloat(price) || 0,
-        });
-        setTitle("");
-        setDescription("");
-        setPrice("0");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to create the course.");
+      const result = await createCourse({
+        title: title.trim(),
+        description: description.trim(),
+        price: Number.parseFloat(price) || 0,
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
       }
+      setTitle("");
+      setDescription("");
+      setPrice("0");
     });
   }
 

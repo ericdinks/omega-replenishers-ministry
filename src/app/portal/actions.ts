@@ -71,12 +71,16 @@ export async function registerStudent(input: {
   return {};
 }
 
-export async function createCourse(input: { title: string; description: string; price: number }) {
+export async function createCourse(input: {
+  title: string;
+  description: string;
+  price: number;
+}): Promise<{ error?: string }> {
   const session = await requireSession();
   const supabase = createSupabaseServerClient();
 
   const title = sanitizeText(input.title);
-  if (!title) throw new Error("Give the course a title.");
+  if (!title) return { error: "Give the course a title." };
 
   const { error } = await supabase.from("courses").insert({
     teacher_id: session.user.id,
@@ -85,30 +89,36 @@ export async function createCourse(input: { title: string; description: string; 
     price: Math.max(0, input.price || 0),
   });
 
-  if (error) throw new Error("Failed to create the course.");
+  if (error) return { error: "Failed to create the course." };
 
   revalidatePath("/portal");
+  return {};
 }
 
-export async function setCourseActive(courseId: string, isActive: boolean) {
+export async function setCourseActive(
+  courseId: string,
+  isActive: boolean
+): Promise<{ error?: string }> {
   await requireSession();
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase.from("courses").update({ is_active: isActive }).eq("id", courseId);
-  if (error) throw new Error("Failed to update the course.");
+  if (error) return { error: "Failed to update the course." };
 
   revalidatePath("/portal");
   revalidatePath(`/portal/courses/${courseId}`);
+  return {};
 }
 
-export async function deleteCourse(courseId: string) {
+export async function deleteCourse(courseId: string): Promise<{ error?: string }> {
   await requireSession();
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase.from("courses").delete().eq("id", courseId);
-  if (error) throw new Error("Failed to delete the course.");
+  if (error) return { error: "Failed to delete the course." };
 
   revalidatePath("/portal");
+  return {};
 }
 
 export async function addCourseMaterial(input: {
@@ -118,17 +128,17 @@ export async function addCourseMaterial(input: {
   youtubeUrl?: string;
   body?: string;
   displayOrder: number;
-}) {
+}): Promise<{ error?: string }> {
   await requireSession();
   const supabase = createSupabaseServerClient();
 
   const title = sanitizeText(input.title);
-  if (!title) throw new Error("Give the material a title.");
+  if (!title) return { error: "Give the material a title." };
 
   let youtubeVideoId: string | null = null;
   if (input.materialType === "youtube") {
     youtubeVideoId = extractYoutubeVideoId(input.youtubeUrl ?? "");
-    if (!youtubeVideoId) throw new Error("That doesn't look like a valid YouTube link.");
+    if (!youtubeVideoId) return { error: "That doesn't look like a valid YouTube link." };
   }
 
   const { error } = await supabase.from("course_materials").insert({
@@ -140,25 +150,30 @@ export async function addCourseMaterial(input: {
     display_order: input.displayOrder,
   });
 
-  if (error) throw new Error("Failed to add the material.");
+  if (error) return { error: "Failed to add the material." };
 
   revalidatePath(`/portal/courses/${input.courseId}`);
+  return {};
 }
 
-export async function deleteCourseMaterial(materialId: string, courseId: string) {
+export async function deleteCourseMaterial(
+  materialId: string,
+  courseId: string
+): Promise<{ error?: string }> {
   await requireSession();
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase.from("course_materials").delete().eq("id", materialId);
-  if (error) throw new Error("Failed to delete the material.");
+  if (error) return { error: "Failed to delete the material." };
 
   revalidatePath(`/portal/courses/${courseId}`);
+  return {};
 }
 
 export async function reorderCourseMaterials(
   courseId: string,
   updates: { id: string; display_order: number }[]
-) {
+): Promise<{ error?: string }> {
   await requireSession();
   const supabase = createSupabaseServerClient();
 
@@ -168,9 +183,10 @@ export async function reorderCourseMaterials(
     )
   );
 
-  if (results.some((r) => r.error)) throw new Error("Failed to reorder the materials.");
+  if (results.some((r) => r.error)) return { error: "Failed to reorder the materials." };
 
   revalidatePath(`/portal/courses/${courseId}`);
+  return {};
 }
 
 /**
@@ -180,7 +196,7 @@ export async function reorderCourseMaterials(
  * ministry's PayPal account can't do automated Checkout (see the store
  * for why).
  */
-export async function enrollInCourse(courseId: string, price: number) {
+export async function enrollInCourse(courseId: string, price: number): Promise<{ error?: string }> {
   const session = await requireSession();
   const supabase = createSupabaseServerClient();
 
@@ -191,13 +207,17 @@ export async function enrollInCourse(courseId: string, price: number) {
     amount_due: price,
   });
 
-  if (error) throw new Error("Failed to enroll. You may already be enrolled in this course.");
+  if (error) return { error: "Failed to enroll. You may already be enrolled in this course." };
 
   revalidatePath(`/portal/courses/${courseId}`);
+  return {};
 }
 
 /** Marks a pending enrollment active once the teacher/admin confirms the PayPal payment landed. */
-export async function confirmEnrollment(enrollmentId: string, courseId: string) {
+export async function confirmEnrollment(
+  enrollmentId: string,
+  courseId: string
+): Promise<{ error?: string }> {
   await requireSession();
   const supabase = createSupabaseServerClient();
 
@@ -206,8 +226,9 @@ export async function confirmEnrollment(enrollmentId: string, courseId: string) 
     .update({ status: "active" })
     .eq("id", enrollmentId);
 
-  if (error) throw new Error("Failed to confirm the enrollment.");
+  if (error) return { error: "Failed to confirm the enrollment." };
 
   revalidatePath(`/portal/courses/${courseId}`);
   revalidatePath("/admin");
+  return {};
 }

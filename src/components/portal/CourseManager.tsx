@@ -31,21 +31,21 @@ function AddMaterialForm({ courseId, nextOrder }: { courseId: string; nextOrder:
     setError(null);
 
     startSaving(async () => {
-      try {
-        await addCourseMaterial({
-          courseId,
-          title: title.trim(),
-          materialType,
-          youtubeUrl,
-          body,
-          displayOrder: nextOrder,
-        });
-        setTitle("");
-        setYoutubeUrl("");
-        setBody("");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to add the material.");
+      const result = await addCourseMaterial({
+        courseId,
+        title: title.trim(),
+        materialType,
+        youtubeUrl,
+        body,
+        displayOrder: nextOrder,
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
       }
+      setTitle("");
+      setYoutubeUrl("");
+      setBody("");
     });
   }
 
@@ -121,12 +121,15 @@ function MaterialsManager({ courseId, materials }: { courseId: string; materials
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [dragged, setDragged] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(materialId: string) {
     if (!window.confirm("Delete this material permanently?")) return;
+    setError(null);
     setPendingId(materialId);
     try {
-      await deleteCourseMaterial(materialId, courseId);
+      const result = await deleteCourseMaterial(materialId, courseId);
+      if (result.error) setError(result.error);
     } finally {
       setPendingId(null);
     }
@@ -146,12 +149,11 @@ function MaterialsManager({ courseId, materials }: { courseId: string; materials
     setItems(next);
     setDragged(null);
 
-    try {
-      await reorderCourseMaterials(
-        courseId,
-        next.map((m, i) => ({ id: m.id, display_order: i }))
-      );
-    } catch {
+    const result = await reorderCourseMaterials(
+      courseId,
+      next.map((m, i) => ({ id: m.id, display_order: i }))
+    );
+    if (result.error) {
       setItems(previous);
       window.alert("Failed to save the new order. Please try again.");
     }
@@ -162,6 +164,7 @@ function MaterialsManager({ courseId, materials }: { courseId: string; materials
       <h4 className="font-display text-sm font-bold text-navy-900">
         Materials ({items.length}) {items.length > 1 ? <span className="font-normal text-navy-400">-- drag to reorder</span> : null}
       </h4>
+      {error ? <p className="mt-1 text-sm text-red-600">{error}</p> : null}
       {items.length === 0 ? (
         <p className="mt-2 text-sm text-navy-400">No materials yet.</p>
       ) : (
@@ -217,11 +220,14 @@ function MaterialsManager({ courseId, materials }: { courseId: string; materials
 
 function EnrollmentsManager({ courseId, enrollments }: { courseId: string; enrollments: CourseEnrollmentRow[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleConfirm(enrollmentId: string) {
+    setError(null);
     setPendingId(enrollmentId);
     try {
-      await confirmEnrollment(enrollmentId, courseId);
+      const result = await confirmEnrollment(enrollmentId, courseId);
+      if (result.error) setError(result.error);
     } finally {
       setPendingId(null);
     }
@@ -232,6 +238,7 @@ function EnrollmentsManager({ courseId, enrollments }: { courseId: string; enrol
       <h4 className="font-display text-sm font-bold text-navy-900">
         Enrollments ({enrollments.length})
       </h4>
+      {error ? <p className="mt-1 text-sm text-red-600">{error}</p> : null}
       {enrollments.length === 0 ? (
         <p className="mt-2 text-sm text-navy-400">No one has enrolled yet.</p>
       ) : (

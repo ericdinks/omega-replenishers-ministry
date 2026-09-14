@@ -9,11 +9,14 @@ import type { CourseRow } from "@/lib/types/database";
 
 export function TeacherCoursesList({ courses }: { courses: CourseRow[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleToggleActive(course: CourseRow) {
+    setError(null);
     setPendingId(course.id);
     try {
-      await setCourseActive(course.id, !course.is_active);
+      const result = await setCourseActive(course.id, !course.is_active);
+      if (result.error) setError(result.error);
     } finally {
       setPendingId(null);
     }
@@ -21,9 +24,11 @@ export function TeacherCoursesList({ courses }: { courses: CourseRow[] }) {
 
   async function handleDelete(courseId: string) {
     if (!window.confirm("Delete this course and all its materials permanently?")) return;
+    setError(null);
     setPendingId(courseId);
     try {
-      await deleteCourse(courseId);
+      const result = await deleteCourse(courseId);
+      if (result.error) setError(result.error);
     } finally {
       setPendingId(null);
     }
@@ -32,6 +37,7 @@ export function TeacherCoursesList({ courses }: { courses: CourseRow[] }) {
   return (
     <div>
       <h3 className="font-display text-sm font-bold text-navy-900">My Courses ({courses.length})</h3>
+      {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       {courses.length === 0 ? (
         <p className="mt-2 text-sm text-navy-400">You haven&apos;t created any courses yet.</p>
       ) : (
