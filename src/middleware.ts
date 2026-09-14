@@ -2,9 +2,11 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Protects every /admin route except /admin/login behind a valid
- * Supabase Auth session. Also refreshes the session cookie on each
- * request so long-lived admin sessions don't silently expire mid-visit.
+ * Protects every /admin route except /admin/login behind a valid Supabase
+ * Auth session belonging to an actual `admin` profile -- teacher/student
+ * accounts (Training Portal) are real sessions too, and must never see
+ * this dashboard. Also refreshes the session cookie on each request so
+ * long-lived admin sessions don't silently expire mid-visit.
  */
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: request.headers } });
@@ -39,8 +41,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (session && isLoginRoute) {
-    return NextResponse.redirect(new URL("/admin", request.url));
+  if (session) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    const isAdmin = profile?.role === "admin";
+
+    if (!isAdmin && !isLoginRoute) {
+      return NextResponse.redirect(new URL("/portal", request.url));
+    }
+
+    if (isAdmin && isLoginRoute) {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
   }
 
   return response;

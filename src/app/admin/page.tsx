@@ -13,6 +13,8 @@ import { AdminUsersManager, type AdminUserSummary } from "@/components/admin/Adm
 import { ProductsManager } from "@/components/admin/ProductsManager";
 import { ProductOrdersManager } from "@/components/admin/ProductOrdersManager";
 import { PhotosManager } from "@/components/admin/PhotosManager";
+import { TeacherAccountsManager } from "@/components/admin/TeacherAccountsManager";
+import { PendingEnrollmentsOverview } from "@/components/admin/PendingEnrollmentsOverview";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { signOutAdmin } from "@/app/admin/actions";
 import { youtubeConfig } from "@/lib/config/site";
@@ -50,6 +52,9 @@ export default async function AdminDashboardPage() {
     { data: products },
     { data: productOrders },
     { data: photos },
+    { data: profiles },
+    { data: pendingEnrollments },
+    { data: allCourses },
   ] = await Promise.all([
     admin.from("prayer_requests").select("*").order("created_at", { ascending: false }),
     admin
@@ -73,6 +78,13 @@ export default async function AdminDashboardPage() {
       .select("*")
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false }),
+    admin.from("profiles").select("*"),
+    admin
+      .from("course_enrollments")
+      .select("*")
+      .eq("status", "pending_payment")
+      .order("created_at", { ascending: false }),
+    admin.from("courses").select("*").order("created_at", { ascending: false }),
   ]);
 
   const allRequests = requests ?? [];
@@ -82,7 +94,11 @@ export default async function AdminDashboardPage() {
   const allAnnouncements = announcements ?? [];
   const allTestimonials = testimonials ?? [];
   const allDonationTiers = donationTiers ?? [];
+  const allProfiles = profiles ?? [];
+  const roleById = new Map(allProfiles.map((p) => [p.id, p.role]));
+
   const adminUsers: AdminUserSummary[] = (authUsers?.users ?? [])
+    .filter((user) => roleById.get(user.id) === "admin")
     .map((user) => ({
       id: user.id,
       email: user.email ?? "(no email)",
@@ -90,12 +106,30 @@ export default async function AdminDashboardPage() {
       lastSignInAt: user.last_sign_in_at ?? null,
     }))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  const teacherAccounts: AdminUserSummary[] = (authUsers?.users ?? [])
+    .filter((user) => roleById.get(user.id) === "teacher")
+    .map((user) => ({
+      id: user.id,
+      email: user.email ?? "(no email)",
+      createdAt: user.created_at,
+      lastSignInAt: user.last_sign_in_at ?? null,
+    }))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
   const allProducts = products ?? [];
   const allProductOrders = productOrders ?? [];
   const allPhotos = photos ?? [];
   const productTitles: Record<string, string> = Object.fromEntries(
     allProducts.map((product) => [product.id, product.title])
   );
+
+  const allCoursesList = allCourses ?? [];
+  const courseTitleById: Record<string, string> = Object.fromEntries(
+    allCoursesList.map((c) => [c.id, c.title])
+  );
+  const emailById = new Map((authUsers?.users ?? []).map((u) => [u.id, u.email ?? "(no email)"]));
+  const allPendingEnrollments = pendingEnrollments ?? [];
 
   return (
     <div className="min-h-screen bg-navy-50 py-10">
@@ -221,6 +255,20 @@ export default async function AdminDashboardPage() {
                         <ProductOrdersManager orders={allProductOrders} productTitles={productTitles} />
                       </div>
                     </div>
+                  </div>
+                ),
+              },
+              {
+                id: "training-portal",
+                label: "Training Portal",
+                content: (
+                  <div className="space-y-10">
+                    <TeacherAccountsManager teachers={teacherAccounts} />
+                    <PendingEnrollmentsOverview
+                      enrollments={allPendingEnrollments}
+                      courseTitleById={courseTitleById}
+                      emailById={Object.fromEntries(emailById)}
+                    />
                   </div>
                 ),
               },

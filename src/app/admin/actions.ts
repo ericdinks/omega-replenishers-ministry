@@ -23,6 +23,12 @@ import { buildDownloadFilename } from "@/lib/utils/filename";
 /** Every page whose text/media comes from Supabase; revalidated after an edit. */
 const CONTENT_DEPENDENT_PATHS = ["/", "/about", "/contact"] as const;
 
+/**
+ * Gates every admin server action behind an actual `admin` role, not just
+ * "is there a session" -- teacher/student accounts (see the Training
+ * Portal) are real Supabase Auth sessions too, and must never be able to
+ * reach any of these actions.
+ */
 async function assertAuthenticated() {
   const supabase = createSupabaseServerClient();
   const {
@@ -30,6 +36,17 @@ async function assertAuthenticated() {
   } = await supabase.auth.getSession();
 
   if (!session) {
+    redirect("/admin/login");
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", session.user.id)
+    .maybeSingle();
+
+  if (profile?.role !== "admin") {
     redirect("/admin/login");
   }
 
@@ -416,6 +433,7 @@ export async function createAdminUser(email: string, password: string) {
     email: email.trim(),
     password,
     email_confirm: true,
+    user_metadata: { role: "admin" },
   });
 
   if (error) {
@@ -454,13 +472,16 @@ export async function deleteAdminUser(userId: string) {
   }
 
   const admin = createSupabaseAdminClient();
-  const { data: usersList, error: listError } = await admin.auth.admin.listUsers();
+  const { count: adminCount, error: countError } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "admin");
 
-  if (listError) {
+  if (countError) {
     throw new Error("Failed to verify remaining operators.");
   }
 
-  if (usersList.users.length <= 1) {
+  if ((adminCount ?? 0) <= 1) {
     throw new Error("Can't delete the last remaining operator account.");
   }
 
@@ -692,5 +713,41 @@ export async function deletePhoto(id: string) {
   }
 
   revalidatePath("/gallery");
+  revalidatePath("/admin");
+}
+
+/**
+ * Creates a Training Portal teacher login. Unlike student self-registration,
+ * only an admin can create teacher accounts (see the Training Portal plan).
+ */
+export async function createTeacherAccount(fullName: string, email: string, password: string) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.createUser({
+    email: email.trim(),
+    password,
+    email_confirm: true,
+    user_metadata: { role: "teacher", full_name: fullName.trim() },
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to create the teacher account.");
+  }
+
+  revalidatePath("/admin");
+}
+
+/** Deletes a teacher account. Their courses/materials are removed with it (cascade). */
+export async function deleteTeacherAccount(userId: string) {
+  await assertAuthenticated();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(userId);
+
+  if (error) {
+    throw new Error(error.message || "Failed to delete the teacher account.");
+  }
+
   revalidatePath("/admin");
 }

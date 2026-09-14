@@ -8,6 +8,14 @@
 export type PrayerRequestStatus = "pending" | "answered";
 export type TestimonialStatus = "pending" | "approved" | "rejected";
 export type VideoSourceType = "recorded" | "uploaded";
+export type ProfileRole = "admin" | "teacher" | "student";
+
+export type ProfileRow = {
+  id: string;
+  role: ProfileRole;
+  full_name: string;
+  created_at: string;
+};
 
 export type PrayerRequestRow = {
   id: string;
@@ -151,6 +159,49 @@ export type PhotoRow = {
 export type PhotoInsert = Pick<PhotoRow, "image_url" | "album"> &
   Partial<Pick<PhotoRow, "caption" | "display_order">>;
 
+export type CourseRow = {
+  id: string;
+  created_at: string;
+  teacher_id: string;
+  title: string;
+  description: string;
+  price: number;
+  is_active: boolean;
+};
+
+export type CourseInsert = Pick<CourseRow, "teacher_id" | "title"> &
+  Partial<Pick<CourseRow, "description" | "price" | "is_active">>;
+
+export type CourseMaterialType = "youtube" | "text";
+
+export type CourseMaterialRow = {
+  id: string;
+  created_at: string;
+  course_id: string;
+  title: string;
+  material_type: CourseMaterialType;
+  youtube_video_id: string | null;
+  body: string;
+  display_order: number;
+};
+
+export type CourseMaterialInsert = Pick<CourseMaterialRow, "course_id" | "title" | "material_type"> &
+  Partial<Pick<CourseMaterialRow, "youtube_video_id" | "body" | "display_order">>;
+
+export type CourseEnrollmentStatus = "active" | "pending_payment";
+
+export type CourseEnrollmentRow = {
+  id: string;
+  created_at: string;
+  course_id: string;
+  student_id: string;
+  status: CourseEnrollmentStatus;
+  amount_due: number;
+};
+
+export type CourseEnrollmentInsert = Pick<CourseEnrollmentRow, "course_id" | "student_id"> &
+  Partial<Pick<CourseEnrollmentRow, "status" | "amount_due">>;
+
 // NOTE: this must be a `type`, not an `interface`. supabase-js's generics
 // check `Database[Schema] extends GenericSchema` (which requires an index
 // signature on Tables/Views/Functions); a named `interface` never
@@ -239,6 +290,32 @@ export type Database = {
         Row: PhotoRow;
         Insert: PhotoInsert;
         Update: Partial<Pick<PhotoRow, "caption" | "album" | "display_order">>;
+        Relationships: [];
+      };
+      profiles: {
+        Row: ProfileRow;
+        Insert: Pick<ProfileRow, "id" | "role"> & Partial<Pick<ProfileRow, "full_name">>;
+        Update: Partial<Pick<ProfileRow, "role" | "full_name">>;
+        Relationships: [];
+      };
+      courses: {
+        Row: CourseRow;
+        Insert: CourseInsert;
+        Update: Partial<Pick<CourseRow, "title" | "description" | "price" | "is_active">>;
+        Relationships: [];
+      };
+      course_materials: {
+        Row: CourseMaterialRow;
+        Insert: CourseMaterialInsert;
+        Update: Partial<
+          Pick<CourseMaterialRow, "title" | "material_type" | "youtube_video_id" | "body" | "display_order">
+        >;
+        Relationships: [];
+      };
+      course_enrollments: {
+        Row: CourseEnrollmentRow;
+        Insert: CourseEnrollmentInsert;
+        Update: Partial<Pick<CourseEnrollmentRow, "status">>;
         Relationships: [];
       };
     };
