@@ -2,7 +2,17 @@ import { NextResponse } from "next/server";
 import { youtubeConfig } from "@/lib/config/site";
 import { fetchPlaylistVideos, getUploadsPlaylistId } from "@/lib/youtube/playlist";
 
-export const revalidate = 0;
+/**
+ * Caches this route's own JSON response for 30 seconds (Next.js route
+ * segment config), so a burst of concurrent visitors -- exactly what
+ * happens during an actual live service -- shares one upstream call
+ * instead of each visitor triggering their own. This used to be set to
+ * `0` (meaning "never cache"), which silently forced every fetch inside
+ * this handler to skip caching too and made the route hammer YouTube's
+ * search.list quota (a tight 100-call/day bucket) under real traffic --
+ * exactly the failure mode this endpoint most needs to survive.
+ */
+export const revalidate = 30;
 
 interface YouTubeSearchResponse {
   items?: Array<{ id?: { videoId?: string } }>;
@@ -28,6 +38,18 @@ export async function GET() {
     return NextResponse.json({ configured: false, isLive: false, videoId: null });
   }
 
+  const uploadsPlaylistId = getUploadsPlaylistId(channelId);
+
+  /** Last-resort so the player always has something to play even if the live check itself fails. */
+  async function mostRecentUpload(): Promise<string | null> {
+    try {
+      const [mostRecent] = await fetchPlaylistVideos(uploadsPlaylistId, 1);
+      return mostRecent?.videoId ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   const params = new URLSearchParams({
     part: "id",
     channelId,
@@ -43,10 +65,12 @@ export async function GET() {
     );
 
     if (!response.ok) {
-      return NextResponse.json(
-        { configured: true, isLive: false, videoId: null, error: "youtube_api_error" },
-        { status: 200 }
-      );
+      return NextResponse.json({
+        configured: true,
+        isLive: false,
+        videoId: await mostRecentUpload(),
+        error: "youtube_api_error",
+      });
     }
 
     const data = (await response.json()) as YouTubeSearchResponse;
@@ -58,18 +82,17 @@ export async function GET() {
 
     // Not live -- show the channel's actual most recent upload instead of
     // a fixed fallback, so the player always reflects what's really there.
-    const uploadsPlaylistId = getUploadsPlaylistId(channelId);
-    const [mostRecent] = await fetchPlaylistVideos(uploadsPlaylistId, 1);
-
     return NextResponse.json({
       configured: true,
       isLive: false,
-      videoId: mostRecent?.videoId ?? null,
+      videoId: await mostRecentUpload(),
     });
   } catch {
-    return NextResponse.json(
-      { configured: true, isLive: false, videoId: null, error: "network_error" },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      configured: true,
+      isLive: false,
+      videoId: await mostRecentUpload(),
+      error: "network_error",
+    });
   }
 }

@@ -6,6 +6,7 @@ interface LiveStatusResponse {
   configured: boolean;
   isLive: boolean;
   videoId: string | null;
+  error?: string;
 }
 
 /**
@@ -22,6 +23,7 @@ export function LiveBroadcastPlayer() {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
   const [embedDomain, setEmbedDomain] = useState("");
+  const [configured, setConfigured] = useState(true);
 
   useEffect(() => {
     setEmbedDomain(window.location.hostname);
@@ -36,9 +38,10 @@ export function LiveBroadcastPlayer() {
         if (!cancelled) {
           setIsLive(data.isLive);
           setVideoId(data.videoId);
+          setConfigured(data.configured);
         }
       } catch {
-        // Leaves videoId null; the "not configured" state below covers it.
+        // Leaves videoId null; the fallback state below covers it.
       }
     }
 
@@ -49,8 +52,9 @@ export function LiveBroadcastPlayer() {
     return (
       <div className="flex aspect-video w-full items-center justify-center rounded-xl border border-navy-100 bg-navy-50 text-center">
         <p className="max-w-sm px-6 text-sm text-navy-500">
-          The broadcast player is not configured yet. Set
-          NEXT_PUBLIC_YOUTUBE_CHANNEL_ID and YOUTUBE_API_KEY in your environment variables.
+          {configured
+            ? "Loading the broadcast player... if this doesn't load, please refresh the page."
+            : "The broadcast player is not configured yet. Set NEXT_PUBLIC_YOUTUBE_CHANNEL_ID and YOUTUBE_API_KEY in your environment variables."}
         </p>
       </div>
     );
