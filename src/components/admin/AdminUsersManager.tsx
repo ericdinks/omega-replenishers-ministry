@@ -118,13 +118,13 @@ export function AdminUsersManager({
     }
     setError(null);
     startCreating(async () => {
-      try {
-        await createAdminUser(email.trim(), password);
-        setEmail("");
-        setPassword("");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to create the account.");
+      const result = await createAdminUser(email.trim(), password);
+      if (result.error) {
+        setError(result.error);
+        return;
       }
+      setEmail("");
+      setPassword("");
     });
   }
 

@@ -37,17 +37,23 @@ async function requireSession() {
  * because creating a Supabase Auth user requires the service role -- the
  * account itself is a plain student with no elevated access. The caller
  * signs in immediately afterward with the same credentials.
+ *
+ * Returns `{ error }` instead of throwing on a known, user-facing failure
+ * (e.g. duplicate email). A thrown Error here would cross the Server
+ * Component render boundary on this page's next automatic refresh and get
+ * redacted to a generic digest in production -- returning a plain value
+ * keeps the real message reaching the form.
  */
 export async function registerStudent(input: {
   fullName: string;
   email: string;
   password: string;
-}) {
+}): Promise<{ error?: string }> {
   const fullName = sanitizeText(input.fullName);
   const email = sanitizeEmail(input.email);
 
   if (!fullName || !email || input.password.length < 6) {
-    throw new Error("Enter your name, a valid email, and a password of at least 6 characters.");
+    return { error: "Enter your name, a valid email, and a password of at least 6 characters." };
   }
 
   const admin = createSupabaseAdminClient();
@@ -59,8 +65,10 @@ export async function registerStudent(input: {
   });
 
   if (error) {
-    throw new Error(error.message || "Failed to create your account.");
+    return { error: error.message || "Failed to create your account." };
   }
+
+  return {};
 }
 
 export async function createCourse(input: { title: string; description: string; price: number }) {

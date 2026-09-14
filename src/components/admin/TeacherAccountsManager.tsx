@@ -25,14 +25,14 @@ export function TeacherAccountsManager({ teachers }: { teachers: AdminUserSummar
     }
     setError(null);
     startCreating(async () => {
-      try {
-        await createTeacherAccount(fullName, email.trim(), password);
-        setFullName("");
-        setEmail("");
-        setPassword("");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to create the account.");
+      const result = await createTeacherAccount(fullName, email.trim(), password);
+      if (result.error) {
+        setError(result.error);
+        return;
       }
+      setFullName("");
+      setEmail("");
+      setPassword("");
     });
   }
 

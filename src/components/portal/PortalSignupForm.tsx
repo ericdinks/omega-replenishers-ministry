@@ -22,22 +22,22 @@ export function PortalSignupForm() {
     setError(null);
 
     startSubmitting(async () => {
-      try {
-        await registerStudent({ fullName, email, password });
-
-        const supabase = createSupabaseBrowserClient();
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) {
-          setError("Account created -- please sign in.");
-          router.push("/portal/login");
-          return;
-        }
-
-        router.push("/portal");
-        router.refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to create your account.");
+      const result = await registerStudent({ fullName, email, password });
+      if (result.error) {
+        setError(result.error);
+        return;
       }
+
+      const supabase = createSupabaseBrowserClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError("Account created -- please sign in.");
+        router.push("/portal/login");
+        return;
+      }
+
+      router.push("/portal");
+      router.refresh();
     });
   }
 

@@ -425,7 +425,14 @@ export async function setVideoCategoryAssignment(
  * API -- equivalent to Authentication -> Users -> Add user in the
  * Supabase dashboard, but reachable without leaving this app.
  */
-export async function createAdminUser(email: string, password: string) {
+/**
+ * Returns `{ error }` instead of throwing on a known, user-facing failure
+ * (e.g. duplicate email). A thrown Error here would cross the Server
+ * Component render boundary on this page's next automatic refresh and get
+ * redacted to a generic digest in production -- returning a plain value
+ * keeps the real message reaching the form.
+ */
+export async function createAdminUser(email: string, password: string): Promise<{ error?: string }> {
   await assertAuthenticated();
 
   const admin = createSupabaseAdminClient();
@@ -437,10 +444,11 @@ export async function createAdminUser(email: string, password: string) {
   });
 
   if (error) {
-    throw new Error(error.message || "Failed to create the operator account.");
+    return { error: error.message || "Failed to create the operator account." };
   }
 
   revalidatePath("/admin");
+  return {};
 }
 
 /** Sets a new password for an existing operator account -- no email round trip. */
@@ -720,7 +728,11 @@ export async function deletePhoto(id: string) {
  * Creates a Training Portal teacher login. Unlike student self-registration,
  * only an admin can create teacher accounts (see the Training Portal plan).
  */
-export async function createTeacherAccount(fullName: string, email: string, password: string) {
+export async function createTeacherAccount(
+  fullName: string,
+  email: string,
+  password: string
+): Promise<{ error?: string }> {
   await assertAuthenticated();
 
   const admin = createSupabaseAdminClient();
@@ -732,10 +744,11 @@ export async function createTeacherAccount(fullName: string, email: string, pass
   });
 
   if (error) {
-    throw new Error(error.message || "Failed to create the teacher account.");
+    return { error: error.message || "Failed to create the teacher account." };
   }
 
   revalidatePath("/admin");
+  return {};
 }
 
 /** Deletes a teacher account. Their courses/materials are removed with it (cascade). */
