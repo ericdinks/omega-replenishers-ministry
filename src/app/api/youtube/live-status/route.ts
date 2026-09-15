@@ -3,16 +3,20 @@ import { youtubeConfig } from "@/lib/config/site";
 import { fetchPlaylistVideos, getUploadsPlaylistId } from "@/lib/youtube/playlist";
 
 /**
- * Caches this route's own JSON response for 30 seconds (Next.js route
- * segment config), so a burst of concurrent visitors -- exactly what
- * happens during an actual live service -- shares one upstream call
- * instead of each visitor triggering their own. This used to be set to
- * `0` (meaning "never cache"), which silently forced every fetch inside
- * this handler to skip caching too and made the route hammer YouTube's
- * search.list quota (a tight 100-call/day bucket) under real traffic --
- * exactly the failure mode this endpoint most needs to survive.
+ * Forces this route to actually run on every request rather than being
+ * treated as statically cacheable. A prior fix set `revalidate = 30`
+ * intending to cache the route's own response for 30 seconds, but that
+ * makes Next.js build it as a static/ISR route -- which, on Vercel, was
+ * observed to freeze on one cached response (including a captured
+ * upstream error) far longer than 30 seconds instead of properly
+ * revalidating, leaving the live player stuck broken mid-service.
+ *
+ * The actual rate-limiting protection against YouTube's tight
+ * search.list quota comes from the `next: { revalidate: 30 }` option on
+ * the fetch call below (Next's Data Cache, shared across concurrent
+ * requests within that window) -- not from caching this route itself.
  */
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
 interface YouTubeSearchResponse {
   items?: Array<{ id?: { videoId?: string } }>;
